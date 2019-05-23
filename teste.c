@@ -9,7 +9,7 @@
 #define FALSE 0
 
 void use_resource(char* resource){
-	printf("%d using resource <%s>\n", (int)pthread_self(), resource);
+	printf("%ld using resource <%s>\n", pthread_self(), resource);
 	fflush(stdout);
 }
 //////////////////////////
@@ -21,27 +21,28 @@ void *thread_A(void *args){
 	while(TRUE){
 		sem_wait(&sem_B);// request resource B
 		sem_wait(&sem_A);// request resource A
+
 		// use both resources
 		use_resource("A");
 		use_resource("B");
 		// free both resources
 		sem_post(&sem_A);// free resource A
 		sem_post(&sem_B);// free resource B
-		printf("------------- OK ");fflush(stdout);
+		printf("------------- Finished\n");fflush(stdout);
 	}
 	pthread_exit(NULL);
 }
 void *thread_B(void *args){
 	while(TRUE){
 		sem_wait(&sem_A);// request resource A
-		sem_wait(&sem_B);// request resource B
+		sem_wait(&sem_B);// request resource B	
 		// use both resources
 		use_resource("A");
 		use_resource("B");
 		// free both resources
 		sem_post(&sem_A);// free resource A
 		sem_post(&sem_B);// free resource B
-		printf("------------- OK ");fflush(stdout);
+		printf("------------- Finished\n");fflush(stdout);
 	}
 	pthread_exit(NULL);
 }
@@ -59,4 +60,3 @@ int main(){
 	pthread_join(t_B, NULL);
 	return 0;
 }
-
