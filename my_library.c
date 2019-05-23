@@ -75,46 +75,27 @@ int sem_init(sem_t *sem, int pshared, unsigned int value){
 	unlock();
 	return _sem_init(sem, pshared, value);
 }
-int k = 0;
+
 int sem_wait(sem_t *sem) {
-	printf("k: %d\n",k++);
-	int teste;
 	int r;
-	sem_getvalue(sem, &teste);
+	lock();	
 	pthread_t tid = pthread_self();
-	lock();
 	graph_insert_node(RESOURCE_GRAPH, &tid, FALSE );
-	unlock();
-	if(teste <= 0){
-		lock();
-		graph_insert_edge(RESOURCE_GRAPH, &tid, sem);//Arco que aponta do processo para o recurso 
-		if(graph_has_cicle(RESOURCE_GRAPH,sem)){
-			graph_remove_edge(RESOURCE_GRAPH, &tid, sem);
-			printf("!!!!!!!!!!!!! DEADLOCK !!!!!!!!!!!!!");fflush(stdout);
-			unlock();
-			exit(-1);
-			return -1;
-		}	
-		printf("--> %d: SEM_WAIT(%d)\n", ((int) tid) % 100, ((int) &sem ) %100 );fflush(stdout);	
-		unlock();
-		r = _sem_wait(sem);
-		printf("pass2\n");fflush(stdout);
-		lock();
+	graph_insert_edge(RESOURCE_GRAPH, &tid, sem);//Arco que aponta do processo para o recurso 
+	if(graph_has_cicle(RESOURCE_GRAPH,sem)){
 		graph_remove_edge(RESOURCE_GRAPH, &tid, sem);
-		graph_insert_edge(RESOURCE_GRAPH, sem, &tid); //Apos o recurso ser alocado, arco aponta do recurso para o processo
+		printf("!!!!!!!!!!!!! DEADLOCK !!!!!!!!!!!!!\n");fflush(stdout);
 		unlock();
-		return r;
-	}else{
-		lock();
-		printf("--> %d: SEM_WAIT(%d)\n", ((int) tid) % 100, ((int) &sem ) %100 );fflush(stdout);	
-		unlock();
-		r = _sem_wait(sem);
-		lock();
-		printf("pass1\n");fflush(stdout);	
-		graph_insert_edge(RESOURCE_GRAPH, sem, &tid); //Apos o recurso ser alocado, arco aponta do recurso para o processo
-		unlock();
-		return r;
-	}
+		exit(-1);
+		return -1;
+	}	
+	unlock();
+	r = _sem_wait(sem);
+	lock();
+	graph_remove_edge(RESOURCE_GRAPH, &tid, sem);
+	graph_insert_edge(RESOURCE_GRAPH, sem, &tid); //Apos o recurso ser alocado, arco aponta do recurso para o processo
+	unlock();
+	return r;
 }
 
 int sem_post(sem_t *sem) {
@@ -123,7 +104,7 @@ int sem_post(sem_t *sem) {
 	tid = pthread_self();
 	lock();
 	graph_remove_edge(RESOURCE_GRAPH, sem, &tid); //Remover arco que aponta do recurso para o processo
-	printf("--> %d: SEM_POST(%d)\n", ((int) tid) % 100, ((int) &sem) % 100);fflush(stdout);	
+	//printf("--> %ld: SEM_POST(%p)\n", tid, sem);fflush(stdout);	
 	unlock();
 	r = _sem_post(sem);
 	return(r);
@@ -196,7 +177,7 @@ void graph_insert_edge(  graph_t* graph, void *id_u, void *id_v){
 	node_u = find(graph, id_u);
 
 	if(node_u == NULL || node_v == NULL){
-		printf("--> algum dos vertices nao existente\n");
+		//printf("--> algum dos vertices nao existente\n");
 		return;
 	}
 	if(node_u->adj == NULL){ // first edge in adj list
@@ -211,13 +192,13 @@ void graph_insert_edge(  graph_t* graph, void *id_u, void *id_v){
 	
 	while( cursor->link != NULL ){
 		if( cursor->dest->id == node_v->id ){
-			printf("--> aresta ja existe no grafo\n");
+			//printf("--> aresta ja existe no grafo\n");
 			return;
 		}
 		cursor = cursor->link;
 	}
 	if( cursor->dest->id == node_v->id ){
-			printf("--> aresta ja existe no grafo\n");
+			//printf("--> aresta ja existe no grafo\n");
 			return;
 	}
 	edge_t *new_edge = (edge_t*) malloc(sizeof(edge_t));
@@ -231,7 +212,7 @@ void graph_remove_edge(  graph_t* graph, void *id_u, void *id_v){
 	node_u = find(graph, id_u);
 
 	if( node_u == NULL ){
-		printf("vertice u nao presente\n");
+		//printf("vertice u nao presente\n");
 		return;
 	}
 	if( node_u->adj == NULL)  // sem nodos adjacentes
@@ -258,7 +239,7 @@ void graph_remove_edge(  graph_t* graph, void *id_u, void *id_v){
 		q->link = NULL;
 		return;
 	}
-	printf("edge nao presente no grafo\n");
+	//printf("edge nao presente no grafo\n");
 }
 node_t *find(  graph_t* graph, void *id ){
 	node_t *cursor, *ret;
@@ -275,13 +256,21 @@ node_t *find(  graph_t* graph, void *id ){
 void display( graph_t* graph){
 	node_t *cursor;
 	edge_t *cursor_edge;
-
+	char c;
 	cursor = graph->head;
 	while( cursor != NULL ){
-		printf("%p ->", cursor->id );
+		if( cursor->is_resource == TRUE)
+			c = 'R';
+		else
+			c = 'P';
+		printf("%p<%c> ->", cursor->id, c );
 		cursor_edge = cursor->adj;
 		while(cursor_edge != NULL ){
-			printf(" %p ->", cursor_edge->dest->id);
+			if( cursor_edge->dest->is_resource == TRUE)
+				c = 'R';
+			else
+				c = 'P';
+			printf(" %p<%c> ->", cursor_edge->dest->id, c);
 			cursor_edge = cursor_edge->link;
 		}
 		printf(" / \n");	
