@@ -1,7 +1,8 @@
-/*************************************** 
- * Kevin Costa Scaccia RA: 120478
- ***************************************
- ***************************************/
+/* Copyright (C) Kevin Costa Scaccia - All Rights Reserved
+ * Unauthorized copying of this file, via any medium is strictly prohibited
+ * Proprietary and confidential
+ * Written by Kevin Scaccia <kevin_developer@outlook.com>, March 2019
+ */
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
